@@ -1,0 +1,33 @@
+#! /usr/bin/env ruby
+require 'pp'
+require 'orocos'
+require 'orocos/async'
+
+Orocos.initialize
+
+ur10_task = Orocos.get 'gazebo:default:ur10'
+ur10_task.use_sim_time = false # use realtime to timestamp the samples
+
+begin
+    ur10_task.configure
+    ur10_task.start
+
+    # If you wanted to connect to another task ...
+    # tecgraf_task = Orocos.get 'tecgraf_heads'
+    # ur10_task.pose_samples.connect_to   tecgraf_task.pose_samples
+    # ur10_task.joints_samples.connect_to tecgraf_task.joints_samples
+
+    # Poll a port for data
+    ur10_proxy = Orocos::Async.proxy('gazebo:default:ur10')
+    ur10_proxy.port('pose_samples').on_data do |sample|
+        pp "#{sample.time.strftime("%H:%M:%S.%3N")} #{sample.position.to_a} #{sample.orientation.to_a}"
+    end
+    Orocos::Async.exec
+ensure
+    if ur10_task.state == :RUNNING
+        ur10_task.stop
+    end
+    if ur10_task.state == :STOPPED
+        ur10_task.cleanup
+    end
+end

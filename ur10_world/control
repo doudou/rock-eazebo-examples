@@ -1,0 +1,30 @@
+#! /usr/bin/env ruby
+require 'pp'
+require 'orocos'
+require 'orocos/async'
+
+Orocos.initialize
+
+ur10_task = Orocos.get 'gazebo:default:ur10'
+
+# NOTE: this assumes that scripts/display is already running. Otherwise, it
+# would have to configure & start the ur10_task
+
+# If you wanted to connect to another task ...
+# tecgraf_task = Orocos.get 'tecgraf_heads'
+# tecgraf_task.joints_commands.connect_to ur10_task.joints_cmd
+
+# Otherwise
+joint, position = ARGV[0], Float(ARGV[1])
+position = position * Math::PI / 180
+writer = ur10_task.joints_cmd.writer
+while true
+    sample = Types.base.samples.Joints.new
+    sample.time = Time.now
+    sample.names << "#{joint}"
+    joint_position = Types.base.JointState.new
+    joint_position.position = position
+    sample.elements << joint_position
+    writer.write sample
+end
+
